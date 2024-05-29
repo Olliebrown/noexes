@@ -1,7 +1,7 @@
 #include <switch.h>
 #include <string.h>
-#include <cstdio>
 #include "errors.h"
+#include <stdio.h>
 #include "gecko.h"
 
 extern "C" {
@@ -9,7 +9,8 @@ extern "C" {
 
 	u32 __nx_applet_type = AppletType_None;
 
-	#define INNER_HEAP_SIZE 0x834000 // Arbitrary heap size. 
+	//#define INNER_HEAP_SIZE 0x834000 // Arbitrary heap size. 
+	#define INNER_HEAP_SIZE 0x41A000 // Reduced heap size. 
 	size_t nx_inner_heap_size = INNER_HEAP_SIZE;
 	char   nx_inner_heap[INNER_HEAP_SIZE];
 
@@ -35,6 +36,18 @@ void __libnx_initheap(void) {
 
 void __appInit(void) {
 	Result rc;
+    
+    if (hosversionGet() == 0) {
+        rc = setsysInitialize();
+        if (R_SUCCEEDED(rc)) {
+            SetSysFirmwareVersion fw;
+            rc = setsysGetFirmwareVersion(&fw);
+            if (R_SUCCEEDED(rc))
+                hosversionSet((BIT(31)) | (MAKEHOSVERSION(fw.major, fw.minor, fw.micro)));
+            setsysExit();
+        }
+    }
+
 	/* Initialize services */
 	rc = smInitialize();
 	if (R_FAILED(rc)) {
@@ -131,7 +144,8 @@ static Result _eventCallback(Gecko::DebugEvent event){
 
 int main(int argc, char **argv)
 {
-    //g_debugFile = fopen("Log.txt", "w");
+    g_debugFile = fopen("/switch/EdiZon/Log.txt", "w");
+    printf("testing\n");
     g_Context.dbg.addEventCallback(_eventCallback);
     
     while(appletMainLoop() && !g_Context.exit){
